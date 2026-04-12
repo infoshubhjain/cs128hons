@@ -22,12 +22,10 @@ impl Network {
     /// ```
     pub fn new(layer_sizes: &[usize], activation: ActivationFunction) -> Self {
         assert!(layer_sizes.len() >= 2, "need at least input and output sizes");
-
         let layers = layer_sizes
             .windows(2)
             .map(|pair| Layer::new(pair[0], pair[1]))
             .collect();
-
         Network { layers, activation }
     }
 
@@ -47,6 +45,7 @@ impl Network {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::activation::ActivationFunction;
 
     #[test]
     fn output_shape_matches_final_layer() {
@@ -62,7 +61,25 @@ mod tests {
         for &(a, b) in &[(0.0_f64, 0.0), (0.0, 1.0), (1.0, 0.0), (1.0, 1.0)] {
             let input = Array1::from_vec(vec![a, b]);
             let output = net.forward(&input);
-            assert!(output[0] > 0.0 && output[0] < 1.0, "sigmoid output must be in (0,1)");
+            assert!(
+                output[0] > 0.0 && output[0] < 1.0,
+                "sigmoid output must be in (0,1)"
+            );
         }
+    }
+
+    #[test]
+    fn builds_correct_number_of_layers() {
+        // 4 sizes → 3 consecutive pairs → 3 layers
+        let net = Network::new(&[2, 4, 4, 1], ActivationFunction::Sigmoid);
+        assert_eq!(net.layers.len(), 3);
+    }
+
+    #[test]
+    fn deeper_architecture_produces_correct_output_shape() {
+        let net = Network::new(&[2, 8, 4, 1], ActivationFunction::Sigmoid);
+        let input = Array1::from_vec(vec![0.5, 0.5]);
+        let output = net.forward(&input);
+        assert_eq!(output.len(), 1);
     }
 }
