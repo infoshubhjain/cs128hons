@@ -1,5 +1,6 @@
 /// Supported activation functions for network layers.
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub enum ActivationFunction {
     Sigmoid,
     ReLU,
@@ -16,6 +17,7 @@ impl ActivationFunction {
 
     /// Compute the derivative of the activation function at x.
     /// For Sigmoid, x is the pre-activation (z); for ReLU, x is the pre-activation.
+    #[allow(dead_code)]
     pub fn derivative(&self, x: f64) -> f64 {
         match self {
             ActivationFunction::Sigmoid => {
