@@ -1,7 +1,15 @@
-use ndarray::Array1;
+use ndarray::{Array1, Array2};
 
 use crate::activation::ActivationFunction;
 use crate::layer::Layer;
+
+/// Mean squared error loss: 0.5 * sum((output - target)^2).
+/// Returns (loss, gradient dL/d_output).
+pub fn mse_loss(output: &Array1<f64>, target: &Array1<f64>) -> (f64, Array1<f64>) {
+    let diff = output - target;
+    let loss = 0.5 * diff.mapv(|v| v * v).sum();
+    (loss, diff)
+}
 
 /// A feedforward neural network composed of fully-connected layers.
 pub struct Network {
@@ -10,7 +18,6 @@ pub struct Network {
 }
 
 /// Per-layer cache produced by a forward pass, needed for backpropagation.
-#[allow(dead_code)]
 pub struct LayerCache {
     /// Input to the layer (activation from previous layer, or network input).
     pub input: Array1<f64>,
@@ -43,7 +50,6 @@ impl Network {
     /// Forward pass that also records per-layer caches for backprop.
     ///
     /// Returns (output, caches) where caches[i] corresponds to layers[i].
-    #[allow(dead_code)]
     pub fn forward_with_cache(&self, input: &Array1<f64>) -> (Array1<f64>, Vec<LayerCache>) {
         let mut caches = Vec::with_capacity(self.layers.len());
         let mut current = input.clone();
@@ -62,6 +68,44 @@ impl Network {
         (current, caches)
     }
 
+    /// Run a forward pass and return the output without updating weights (inference).
+    pub fn predict(&self, input: &Array1<f64>) -> Array1<f64> {
+        self.forward(input)
+    }
+
+    /// Train the network on a batch of samples for `epochs` iterations.
+    ///
+    /// `inputs`  — shape (n_samples, input_size)
+    /// `targets` — shape (n_samples, output_size)  (one row per sample)
+    /// Prints MSE loss every `print_every` epochs (set to 0 to suppress).
+    pub fn train(
+        &mut self,
+        inputs: &Array2<f64>,
+        targets: &Array2<f64>,
+        epochs: usize,
+        learning_rate: f64,
+        print_every: usize,
+    ) {
+        let n = inputs.nrows() as f64;
+        for epoch in 0..epochs {
+            let mut total_loss = 0.0;
+
+            for (input_row, target_row) in inputs.rows().into_iter().zip(targets.rows()) {
+                let input: Array1<f64> = input_row.to_owned();
+                let target: Array1<f64> = target_row.to_owned();
+
+                let (output, caches) = self.forward_with_cache(&input);
+                let (loss, grad) = mse_loss(&output, &target);
+                total_loss += loss;
+                self.backward(&caches, &grad, learning_rate);
+            }
+
+            if print_every > 0 && (epoch + 1) % print_every == 0 {
+                println!("Epoch {:>5} — MSE loss: {:.6}", epoch + 1, total_loss / n);
+            }
+        }
+    }
+
     /// Backward pass: given the per-layer caches from `forward_with_cache` and
     /// the upstream gradient of the loss w.r.t. the network output (`d_output`),
     /// compute gradients and update every layer's weights and biases in place.
@@ -73,7 +117,6 @@ impl Network {
     ///   dW     = delta ⊗ input                     — weight gradient (outer product)
     ///   db     = delta                              — bias gradient
     ///   next upstream = Wᵀ · delta                 — passed to the layer below
-    #[allow(dead_code)]
     pub fn backward(
         &mut self,
         caches: &[LayerCache],
@@ -101,10 +144,8 @@ impl Network {
     }
 }
 
-/// Helper: activation derivative at pre-activation value z, dispatched on the
-/// network's activation function. Kept outside Network to avoid borrow conflicts
-/// inside the backward loop.
-#[allow(dead_code)]
+/// Activation derivative at pre-activation value z. Kept outside Network to avoid
+/// borrow conflicts inside the backward loop.
 fn layer_activation_deriv(
     _layer: &Layer,
     z: f64,
@@ -222,5 +263,107 @@ mod tests {
         };
 
         assert!(final_loss < initial_loss, "loss should decrease after training");
+    }
+
+    // ── Dexian: validation and debugging ─────────────────────────────────────
+
+    /// Train on XOR dataset and verify that loss decreases over the full run.
+    ///
+    /// Numerical note: XOR requires a hidden layer to be linearly separable.
+    /// With sigmoid activations and Xavier init, lr=1.0 and 10 000 epochs
+    /// reliably converge; lower lr or fewer epochs may not.  Vanishing
+    /// gradients are not a practical issue here because the network is shallow
+    /// (2 layers) and sigmoid derivatives at the operating point stay above ~0.1.
+    #[test]
+    fn xor_loss_decreases_after_training() {
+        let inputs = Array2::from_shape_vec(
+            (4, 2),
+            vec![0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0],
+        )
+        .unwrap();
+        let targets =
+            Array2::from_shape_vec((4, 1), vec![0.0, 1.0, 1.0, 0.0]).unwrap();
+
+        let mut net = Network::new(&[2, 4, 1], ActivationFunction::Sigmoid);
+
+        let initial_loss: f64 = inputs
+            .rows()
+            .into_iter()
+            .zip(targets.rows())
+            .map(|(x, t)| {
+                let (loss, _) = mse_loss(&net.forward(&x.to_owned()), &t.to_owned());
+                loss
+            })
+            .sum();
+
+        net.train(&inputs, &targets, 10_000, 1.0, 0);
+
+        let final_loss: f64 = inputs
+            .rows()
+            .into_iter()
+            .zip(targets.rows())
+            .map(|(x, t)| {
+                let (loss, _) = mse_loss(&net.forward(&x.to_owned()), &t.to_owned());
+                loss
+            })
+            .sum();
+
+        assert!(
+            final_loss < initial_loss,
+            "XOR loss did not decrease: {final_loss} >= {initial_loss}"
+        );
+    }
+
+    /// After sufficient training, predict should return values close to XOR targets.
+    /// Threshold: outputs for target=0 must be <0.1, outputs for target=1 must be >0.9.
+    #[test]
+    fn xor_predictions_converge() {
+        let xor_cases: &[([f64; 2], f64)] = &[
+            ([0.0, 0.0], 0.0),
+            ([0.0, 1.0], 1.0),
+            ([1.0, 0.0], 1.0),
+            ([1.0, 1.0], 0.0),
+        ];
+
+        let inputs = Array2::from_shape_vec(
+            (4, 2),
+            vec![0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0],
+        )
+        .unwrap();
+        let targets =
+            Array2::from_shape_vec((4, 1), vec![0.0, 1.0, 1.0, 0.0]).unwrap();
+
+        let mut net = Network::new(&[2, 4, 1], ActivationFunction::Sigmoid);
+        net.train(&inputs, &targets, 20_000, 1.0, 0);
+
+        for (input_arr, expected) in xor_cases {
+            let input = Array1::from_vec(input_arr.to_vec());
+            let out = net.predict(&input)[0];
+            if *expected < 0.5 {
+                assert!(
+                    out < 0.1,
+                    "input {:?}: expected ~0 but got {out:.4}",
+                    input_arr
+                );
+            } else {
+                assert!(
+                    out > 0.9,
+                    "input {:?}: expected ~1 but got {out:.4}",
+                    input_arr
+                );
+            }
+        }
+    }
+
+    /// Verify mse_loss returns correct value and gradient.
+    #[test]
+    fn mse_loss_value_and_gradient() {
+        let output = array![0.8, 0.2];
+        let target = array![1.0, 0.0];
+        let (loss, grad) = mse_loss(&output, &target);
+        // loss = 0.5 * ((0.8-1)^2 + (0.2-0)^2) = 0.5 * (0.04 + 0.04) = 0.04
+        assert!((loss - 0.04).abs() < 1e-10, "loss = {loss}");
+        assert!((grad[0] - (-0.2)).abs() < 1e-10);
+        assert!((grad[1] - 0.2).abs() < 1e-10);
     }
 }
