@@ -23,11 +23,13 @@ pub struct LayerCache {
     pub input: Array1<f64>,
     /// Pre-activation values z = W·input + b.
     pub z: Array1<f64>,
-    /// Post-activation values a = activation(z).
-    pub a: Array1<f64>,
 }
 
 impl Network {
+    /// Create a new network with the given layer sizes and activation function.
+    ///
+    /// `layer_sizes` must have at least two elements: input size and output size.
+    /// Hidden layers are specified as intermediate elements, e.g. `&[2, 4, 1]`.
     pub fn new(layer_sizes: &[usize], activation: ActivationFunction) -> Self {
         assert!(layer_sizes.len() >= 2, "need at least input and output sizes");
         let layers = layer_sizes
@@ -59,8 +61,7 @@ impl Network {
             let a = z.mapv(|v| self.activation.apply(v));
             caches.push(LayerCache {
                 input: current,
-                z: z.clone(),
-                a: a.clone(),
+                z,
             });
             current = a;
         }
@@ -127,7 +128,7 @@ impl Network {
 
         for (layer, cache) in self.layers.iter_mut().zip(caches.iter()).rev() {
             // delta = upstream ⊙ activation'(z)
-            let delta: Array1<f64> = upstream * cache.z.mapv(|v| layer_activation_deriv(&layer, v, &self.activation));
+            let delta: Array1<f64> = upstream * cache.z.mapv(|v| layer_activation_deriv(layer, v, &self.activation));
 
             // Gradient w.r.t. input of this layer (passed upstream to the layer below).
             upstream = layer.weights.t().dot(&delta);
@@ -185,8 +186,8 @@ mod tests {
         let (out2, caches) = net.forward_with_cache(&input);
         assert!((out1[0] - out2[0]).abs() < 1e-12);
         assert_eq!(caches.len(), 2);
-        assert_eq!(caches[0].a.len(), 3);
-        assert_eq!(caches[1].a.len(), 1);
+        assert_eq!(caches[0].z.len(), 3);
+        assert_eq!(caches[1].z.len(), 1);
     }
 
     /// Manually verify backward on a 1-layer network (1 input → 1 output, sigmoid).

@@ -3,7 +3,8 @@ mod data;
 mod layer;
 mod network;
 
-use ndarray::{Array1, Array2};
+use ndarray::Array1;
+use ndarray::Array2;
 
 use activation::ActivationFunction;
 use data::xor_data;
