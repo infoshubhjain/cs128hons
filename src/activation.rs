@@ -8,11 +8,11 @@
 /// Add new variants here and implement the corresponding arms in `apply` and
 /// `derivative` to extend the network with additional activation functions.
 #[derive(Clone, Debug)]
-#[allow(dead_code)] // ReLU is part of the public API; the XOR demo uses Sigmoid only
 pub enum ActivationFunction {
     /// Classic sigmoid: output is always in (0, 1). Good default for XOR.
     Sigmoid,
     /// Rectified linear unit: max(0, x). Faster to compute, no vanishing gradient for x > 0.
+    #[allow(dead_code)] // available in the API; the XOR demo uses Sigmoid only
     ReLU,
 }
 

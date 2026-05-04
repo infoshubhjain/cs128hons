@@ -36,7 +36,12 @@ fn main() {
         io::stdout().flush().unwrap();
 
         let mut input = String::new();
-        io::stdin().read_line(&mut input).unwrap();
+        let n_read = io::stdin().read_line(&mut input).unwrap();
+        if n_read == 0 {
+            // stdin closed (e.g. piped input finished) — treat as quit
+            println!("Goodbye.");
+            break;
+        }
 
         match input.trim() {
             "1" => {

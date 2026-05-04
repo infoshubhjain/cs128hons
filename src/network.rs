@@ -144,11 +144,15 @@ impl Network {
     ) {
         let mut upstream = d_output.clone();
 
+        // Borrow self.activation before the loop so the mutable borrow of
+        // self.layers inside the loop doesn't conflict with a shared borrow of self.
+        let activation = &self.activation;
+
         for (layer, cache) in self.layers.iter_mut().zip(caches.iter()).rev() {
             // delta = upstream ⊙ σ'(z): element-wise product of upstream gradient
             // and the activation derivative evaluated at the pre-activation z.
             let delta: Array1<f64> =
-                upstream * cache.z.mapv(|v| activation_deriv(&self.activation, v));
+                upstream * cache.z.mapv(|v| activation.derivative(v));
 
             // Pass the gradient to the layer below before we update weights,
             // because we still need the current weight matrix for this multiply.
@@ -163,12 +167,6 @@ impl Network {
             layer.biases.scaled_add(-learning_rate, &delta);
         }
     }
-}
-
-/// Return the activation derivative σ'(z). Factored out of `backward` to avoid
-/// a simultaneous mutable borrow of `self.layers` and shared borrow of `self.activation`.
-fn activation_deriv(activation: &ActivationFunction, z: f64) -> f64 {
-    activation.derivative(z)
 }
 
 #[cfg(test)]
