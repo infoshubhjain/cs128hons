@@ -18,25 +18,50 @@ cd neuro-rust-shubhj3-jl321-dexian2
 cargo run
 ```
 
-Cargo will download dependencies on the first run. Expected output:
+Cargo will download dependencies on the first run. You will see an interactive menu:
 
 ```
-Training on XOR dataset (2→4→1, sigmoid, lr=1.0, 10 000 epochs)...
-Epoch  1000 — MSE loss: ...
-Epoch  2000 — MSE loss: ...
+=== neuro-rust: XOR neural network ===
+
+  [1] Train   (lr=1, epochs=10000)
+  [2] Predict (requires a trained network)
+  [3] Set learning rate  (current: 1)
+  [4] Set epochs         (current: 10000)
+  [5] Quit
+Choice:
+```
+
+**Typical session:**
+
+1. Press `1` then Enter to train with the defaults. Output during training:
+
+```
+Training (2→4→1, sigmoid, lr=1, 10000 epochs)...
+Epoch    MSE Loss         Accuracy
+------------------------------------
+1000     0.123456         2/4 (50%)
+2000     0.054321         3/4 (75%)
 ...
-Epoch 10000 — MSE loss: ...
-
-Predictions after training:
-Input                Expected   Predicted
-------------------------------------------
-[0, 0]              0.0000     ~0.0
-[0, 1]              1.0000     ~1.0
-[1, 0]              1.0000     ~1.0
-[1, 1]              0.0000     ~0.0
+10000    0.002345         4/4 (100%)
+Training complete.
 ```
 
-Loss should decrease each interval. Final predictions should be close to 0 or 1.
+Loss should decrease each interval. Accuracy should reach 4/4 (100%) by the end.
+
+2. Press `2` then Enter to see predictions:
+
+```
+Input           Expected     Predicted    Correct?
+--------------------------------------------------
+[0, 0]          0.0000       0.0123       ✓
+[0, 1]          1.0000       0.9876       ✓
+[1, 0]          1.0000       0.9854       ✓
+[1, 1]          0.0000       0.0145       ✓
+
+Accuracy: 4/4 (100%)
+```
+
+3. Press `5` to quit.
 
 ## Run tests
 

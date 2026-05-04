@@ -1,7 +1,16 @@
+//! A single fully-connected (dense) layer: weight matrix and bias vector.
+//!
+//! `Layer` is the basic building block of `Network`. It stores the learnable
+//! parameters and computes the pre-activation output z = W·x + b.
+
 use ndarray::{Array1, Array2};
 use rand::Rng;
 
-/// A single fully-connected layer: weights (out × in) and biases (out).
+/// A single fully-connected layer with a weight matrix and bias vector.
+///
+/// Weights have shape `[output_size, input_size]` and biases have shape
+/// `[output_size]`. Xavier initialisation is used so gradients have
+/// reasonable scale at the start of training.
 #[derive(Clone, Debug)]
 pub struct Layer {
     /// Weight matrix, shape [output_size, input_size].

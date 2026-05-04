@@ -1,3 +1,10 @@
+//! Training data for the XOR problem.
+//!
+//! XOR is the canonical benchmark for multi-layer networks: it is the simplest
+//! Boolean function that is not linearly separable, so a hidden layer is required.
+//! This module provides the four input/target pairs in ndarray format ready for
+//! use with `Network::train`.
+
 use ndarray::{Array1, Array2};
 
 /// Returns the 4 XOR input/output pairs as ndarray types.
@@ -31,8 +38,8 @@ mod tests {
     fn xor_data_values() {
         let (inputs, targets) = xor_data();
         // [0,0]=>0, [0,1]=>1, [1,0]=>1, [1,1]=>0
-        let expected_inputs = vec![[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]];
-        let expected_targets = vec![0.0, 1.0, 1.0, 0.0];
+        let expected_inputs = [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]];
+        let expected_targets = [0.0, 1.0, 1.0, 0.0];
         for (i, (ei, et)) in expected_inputs.iter().zip(expected_targets.iter()).enumerate() {
             assert_eq!(inputs[[i, 0]], ei[0]);
             assert_eq!(inputs[[i, 1]], ei[1]);

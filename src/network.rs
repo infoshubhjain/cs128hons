@@ -1,3 +1,9 @@
+//! The feedforward neural network: forward pass, backpropagation, and training loop.
+//!
+//! `Network` owns a stack of `Layer`s and an `ActivationFunction`. Training runs
+//! full-batch gradient descent: for each epoch, every sample is forward-passed,
+//! loss is accumulated, and weights are updated via `backward`.
+
 use ndarray::{Array1, Array2};
 
 use crate::activation::ActivationFunction;
@@ -79,6 +85,7 @@ impl Network {
     /// `inputs`  — shape (n_samples, input_size)
     /// `targets` — shape (n_samples, output_size)  (one row per sample)
     /// Prints MSE loss every `print_every` epochs (set to 0 to suppress).
+    #[allow(dead_code)] // used by tests; the binary entry point uses train_verbose
     pub fn train(
         &mut self,
         inputs: &Array2<f64>,
@@ -103,6 +110,56 @@ impl Network {
 
             if print_every > 0 && (epoch + 1) % print_every == 0 {
                 println!("Epoch {:>5} — MSE loss: {:.6}", epoch + 1, total_loss / n);
+            }
+        }
+    }
+
+    /// Like `train`, but prints epoch, average MSE loss, and classification accuracy
+    /// every `print_every` epochs. Accuracy counts a prediction correct when
+    /// `round(output) == round(target)` (threshold 0.5).
+    pub fn train_verbose(
+        &mut self,
+        inputs: &Array2<f64>,
+        targets: &Array2<f64>,
+        epochs: usize,
+        learning_rate: f64,
+        print_every: usize,
+    ) {
+        let n = inputs.nrows();
+        for epoch in 0..epochs {
+            let mut total_loss = 0.0;
+
+            for (input_row, target_row) in inputs.rows().into_iter().zip(targets.rows()) {
+                let input: Array1<f64> = input_row.to_owned();
+                let target: Array1<f64> = target_row.to_owned();
+
+                let (output, caches) = self.forward_with_cache(&input);
+                let (loss, grad) = mse_loss(&output, &target);
+                total_loss += loss;
+                self.backward(&caches, &grad, learning_rate);
+            }
+
+            if print_every > 0 && (epoch + 1) % print_every == 0 {
+                // Compute accuracy: count samples where round(output) matches round(target).
+                let correct: usize = inputs
+                    .rows()
+                    .into_iter()
+                    .zip(targets.rows())
+                    .filter(|(x, t)| {
+                        let out = self.forward(&x.to_owned());
+                        // Threshold at 0.5 for binary classification.
+                        (out[0].round() - t[0].round()).abs() < 1e-9
+                    })
+                    .count();
+                let accuracy = correct as f64 / n as f64 * 100.0;
+                println!(
+                    "{:<8} {:<16.6} {}/{} ({:.0}%)",
+                    epoch + 1,
+                    total_loss / n as f64,
+                    correct,
+                    n,
+                    accuracy,
+                );
             }
         }
     }

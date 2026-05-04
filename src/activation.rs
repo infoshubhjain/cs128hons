@@ -1,8 +1,18 @@
+//! Activation functions used by network layers during forward and backward passes.
+//!
+//! Each variant implements both the function itself (`apply`) and its derivative
+//! (`derivative`), which is required by backpropagation to compute gradients.
+
 /// Supported activation functions for network layers.
+///
+/// Add new variants here and implement the corresponding arms in `apply` and
+/// `derivative` to extend the network with additional activation functions.
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
+#[allow(dead_code)] // ReLU is part of the public API; the XOR demo uses Sigmoid only
 pub enum ActivationFunction {
+    /// Classic sigmoid: output is always in (0, 1). Good default for XOR.
     Sigmoid,
+    /// Rectified linear unit: max(0, x). Faster to compute, no vanishing gradient for x > 0.
     ReLU,
 }
 
@@ -15,9 +25,10 @@ impl ActivationFunction {
         }
     }
 
-    /// Compute the derivative of the activation function at x.
-    /// For Sigmoid, x is the pre-activation (z); for ReLU, x is the pre-activation.
-    #[allow(dead_code)]
+    /// Compute the derivative of the activation function at pre-activation value `x`.
+    ///
+    /// For Sigmoid: σ'(x) = σ(x) · (1 − σ(x))
+    /// For ReLU:   f'(x) = 1 if x > 0, else 0
     pub fn derivative(&self, x: f64) -> f64 {
         match self {
             ActivationFunction::Sigmoid => {

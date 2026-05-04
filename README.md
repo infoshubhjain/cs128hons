@@ -28,7 +28,9 @@ The project has four major components.
 
 **Forward and Backward Pass** — Forward propagation will compute activations layer by layer using a configurable activation function (sigmoid to start, with the option to add ReLU). Backpropagation will compute gradients via the chain rule, propagating error from the output layer back through each hidden layer. Gradient descent will update weights and biases using a configurable learning rate.
 
-**Training and Evaluation** — A training loop will run forward pass, compute loss (mean squared error), run backpropagation, and update weights for a configurable number of epochs. We will print loss at intervals so we can verify the network is converging. After training, a predict function will run the forward pass on new inputs and return the output.
+**Training and Evaluation** — A training loop runs forward pass, computes loss (mean squared error), runs backpropagation, and updates weights for a configurable number of epochs. Loss and classification accuracy are printed at regular intervals. After training, a predict function runs the forward pass on new inputs and returns the output.
+
+**CLI Interface** — An interactive menu (main.rs) lets the user set learning rate and epoch count, trigger training with live epoch/loss/accuracy output, and run predictions on XOR inputs with a formatted accuracy summary.
 
 ---
 
@@ -50,7 +52,8 @@ The project has four major components.
 
 ### Final Submission (May 6)
 - Code cleaned up, documented, and well-commented
-- CLI interface for running training and prediction
+- Interactive CLI: menu-driven training (configurable learning rate and epoch count),
+  per-epoch loss and accuracy output, and post-training prediction table with accuracy
 - RUN.md complete and verified
 - Presentation video recorded
 
