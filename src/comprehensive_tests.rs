@@ -1,10 +1,13 @@
-#[cfg(test)]
 mod comprehensive_tests {
     use crate::activation::ActivationFunction;
     use crate::data::xor_data;
     use crate::layer::Layer;
     use crate::network::{mse_loss, Network};
     use ndarray::{array, Array1, Array2};
+
+
+
+
     // ACTIVATION FUNCTION TESTS
    
 
@@ -347,7 +350,6 @@ mod comprehensive_tests {
 
     fn test_network_learns_xor_with_hidden_layer() {
         // Test: Network can learn XOR after training
-        // This is an integration test that verifies the full pipeline
 
         let (inputs, targets_1d) = xor_data();
         let targets = Array2::from_shape_vec((4, 1), targets_1d.to_vec()).unwrap();
